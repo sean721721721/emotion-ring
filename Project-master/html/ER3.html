@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Emotion Ring</title>
+<style>
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+
+</style>
+
+<body>
+<!--<img src="http://imgur.com/KvcaQPu.png" style="position:absolute;top:0px;left:385px;z-index:-1">-->
+<div id="fb-root"></div>
+    <script src='../server/fbOauthLogin.js'></script>
+    <div class='container'>
+        <div class='col-lg-12 text-center'>
+            <h2>First, you need to login Facebook: </h2>
+            <button class="btn btn-link btn-inverse offset3" id="user-info" class="muted"></button>
+            <button type="button" class="btn btn-inverse" id="fb-auth"></button>
+            <h2>Enter the Facebook http URL or postid, or choose a post from example posts</h2>
+            <input class='col-lg-12' id='postid_input' placeholder='Facebook URL / Facebook Post Id'></input>
+            <button class='btn btn-primary' id='submit_btn' onclick='retrievePostid()'>GetData</button>
+            <A  class='btn btn-primary' id='submit_btn' Target="_blank" Href="./textdata/Result.html">Visaulize</A>
+        </div>
+    </div>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script> 
+<script type="text/javascript" src="emotion.js"></script>
+<script type="text/javascript" src="http://connect.facebook.net/zh_TW/all.js"></script>
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js'></script>
+<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css'>
+<script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js'></script>
+
+<script>
+function retrievePostid(){
+      function reqListener() {
+         var raw_data = JSON.parse(this.responseText);
+         console.log(raw_data);
+         dataraw = raw_data;
+      }
+      var postid = document.getElementById("postid_input").value;
+      var oReq = new XMLHttpRequest();
+      oReq.onload = reqListener;
+      var qurl = "ER3" + "?postid=" + postid + "&token=" + ACCESS_TOKEN;
+      oReq.open("get", qurl, true);
+      oReq.send();
+    }
+var dataraw;
+//screenSize
+</script>
+
+<script type="text/javascript">
+var width = screen.width,
+	height = screen.height;
+
+/*var background = d3.selectAll('div')
+				b = d3.select('#blacky');
+
+background.style({
+	'width':'960px',
+	'height':'720px',
+	'display':'inline-block',
+	'margin':'3px'
+
+})
+var black = d3.rgb(255,0,0);
+b.style({
+	'background':black
+})*/
+//
+//folorSet
+var color = d3.scale.ordinal()
+	.range(["98df8a" , "31a354" , "ff7f0e" , "ffbb78" , "d62728" , "ff9896" , "9ecae1" , "1f77b4","EEEEEE"]);
+var color2 = d3.scale.ordinal()
+	.range(["79b26e" , "238023" , "cc650b" , "cc9560" , "ab1f20" , "cc7978" , "8b9fb9" , "185f90","AAAAAA"]);
+var color3 = d3.scale.ordinal()
+    .range(["8BCC7E" , "268041" , "E6710B" , "E6A96C" , "C42323" , "E68987" , "8FB7CC" , "1B679E" , "EEEEEE" ]);
+var emo = d3.scale.ordinal()
+	.range(["Pleasure" , "Excitement" , "Arousal" , "Distress" , "Displeasure" , "Depression" , "Sleepiness" , "Relexation","Menu"]);
+
+//forceSet
+var force = d3.layout.force()
+    .charge(-300)
+    .linkDistance(function(d){return (80+(d.deltatime/300000))})
+    .size([width*1.25,height*1.0])
+	.gravity(0.3);
+	
+	
+	
+	var foci = [{x: 0, y: -10} , {x: 10, y: -10} , {x: 10, y: 0} , {x: 10,y: 10} , {x: 0 , y: 10} , {x:-10 , y:10} , {x:-10 , y:0} , {x:-10,y:-10},{x:0,y:0}];
+
+
+	var ifClick	= false;
+	var nodeName;
+//backBoard
+
+
+var svg = d3.select("body")
+	.append("svg")
+    .attr("width", width)
+    .attr("height", height*1.2);
+
+////////////////////////////////dadadadadadad///////////////////////////////////////
+
+	   
+//moveToFront
+d3.selection.prototype.moveToFront = function() {
+	  return this.each(function(){
+	   	 	 this.parentNode.appendChild(this);
+	  });
+	};
+
+
+//scrollFunction
+ScrollFloat = 0;
+window.addEventListener("scroll", myFunc.bind(this, document.getElementById("scoller")), false);
+		function myFunc(div) {
+				      	var scroll = document.body.scrollTop;
+				      	ScrollFloat = scroll;};	
+
+
+
+
+
+//mouseFunction
+var myMouseoverFunction = function(d) {
+	var circle = d3.select(this);
+		circle.transition().duration(200)
+		.attr("rx", function(d){return Math.sqrt(((d.likes)/totallikes)*800)*4+5;})
+   	    .attr("ry", function(d){return Math.sqrt(((d.likes)/totallikes)*800)*4+5;})
+		//.attr("rx", function(d){return Math.sqrt(((d.likes+1)/totallikes)*300+13)*4;})
+	    //.attr("ry", function(d){return Math.sqrt(((d.likes+1)/totallikes)*300+13)*4;})
+		//.attr("rx", function(d){return (((d.likes+1)/totallikes)*300+15)*1.2;} )
+		//.attr("ry", function(d){return (((d.likes+1)/totallikes)*300+15)*1.2;} )
+	    .style("stroke-width", function(d){return d.importance/3+2;})
+		.style("stroke",function(d) { return color2(d.group);})
+	    .style("opacity",1);
+		
+		circle.moveToFront();
+/*	var circle12 = d3.select(this);
+		circle12.transition().duration(200)
+		.attr("rx", function(d){return (d.importance+5)*2;} )
+		.attr("ry", function(d){return (d.importance+5)*2;} )
+	    .style("stroke-width", function(d){return d.importance/3+2;})
+		.style("stroke",function(d) { return color2(4);})
+	    .style("opacity",1);
+*/
+		var content = svg.append("g");
+
+        rect = content.append('rect')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('width', 220)
+                        .attr('height', 500)
+                        .attr('x', 10)
+                        .attr('y', 10+ ScrollFloat)
+                        .attr('ry',10)
+                        .attr('rx',10)
+                        .style('fill', color(d.group))
+	                    .style("stroke-width", 10)
+						.style('opacity',.9)
+		                .style("stroke",color(d.group))
+//中間以外的circle
+if(d.group ==1 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' + '<font color = "#ab1f20">' +'情緒: '+ d.emotion + '<p>'+ 'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' + '<font color = "#ab1f20">'+'發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>'+ '<p>' + '</i>')
+	
+}
+
+else if(d.group ==2 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' +'<font color = "#ab1f20">'+ '情緒: '+ d.emotion + '<p>'+'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' +'<font color = "#ab1f20">'+ '發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>'+'<p>' + '</i>')
+	
+}
+else if(d.group ==3 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' +'<font color = "#185f90">'+ '情緒: '+ d.emotion + '<p>'+'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' + '<font color = "#185f90">'+'發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>' +'<p>' + '</i>')
+	
+}
+else if(d.group ==4 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' +'<font color = "#185f90">'+'情緒: '+ d.emotion + '<p>'+'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject') 
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' +'<font color = "#185f90">'+'發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>' +'<p>' + '</i>')
+	
+}
+else if(d.group ==5 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' + '<font color = "#2bed2b">'+'情緒: '+ d.emotion +'<p>'+ 'positive: '+d.poscount +' negative: '+d.negcount+ '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' + '<font color = "#2bed2b">'+'發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>' + '<p>' + '</i>')
+	
+}
+else if(d.group ==6 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' + '<font color = "#238023">' + '情緒: '+ d.emotion + '<p>'+'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' +'<font color = "#238023">'+ '發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>' + '<p>' + '</i>')
+	
+}
+else if(d.group ==7 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' + '<font color = "#cc650b">' + '情緒: '+ d.emotion + '<p>'+'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' + '<font color = "#cc650b">' + '發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>' +'<p>' + '</i>')
+	
+}
+else if(d.group ==8 )
+      { text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  '<div style="font-size:18px;">' + '<font color = "#d69130">' + '情緒: '+ d.emotion + '<p>'+'positive: '+d.poscount +' negative: '+d.negcount+'<p>' + '</div>'  + 
+                        	 '發言人: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'人氣: ' + d.likes+ '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</font>'+'</div>')
+       text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html(  '<br>'+ '<br>'+'<br>'+'<i>' + '<font color = "#d69130">' + '發文時間: ' + (d.time.getMonth()+1) + '/' + d.time.getDate() + ' '+ d.time.getHours()+':'+d.time.getMinutes()+'</font>' +'<p>' + '</i>')
+	
+}
+	//中間的circle
+		else
+		{
+			
+text = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 18+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',410)
+                        .append("xhtml:p")
+                        .html(  'Po文者: ' + '<strong>' + d.name + '</strong>' + '<p>'  +'留言人數: ' + d.comments + '<div>' + '<div style="width: 200px;">'+'發言內容: '  + d.message  + '</div>' )
+text2 = content.append('foreignObject')
+                        .attr('x', 18)
+                        .attr('y', 430+ ScrollFloat)
+                        .attr('width', 200)
+                        .attr('height',400)
+                        .append("xhtml:p")
+						.html( '<font color="CCCCCC">'+'<i>' + '發文時間: ' + d.time.getMonth()+1 + '/' + d.time.getDate()+ ' '+ d.time.getHours()+':'+d.time.getMinutes()  +'</font>' +  '</i>')
+		
+rect1 = content.append('rect')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('width', 40)
+                        .attr('height', 20)
+                        .attr('x', 10)
+                        .attr('y', 480+ ScrollFloat)
+                        .style('fill', "DDDDDD")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+		                .style("stroke","DDDDDD")
+rect2 = content.append('rect')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('width', 40)
+                        .attr('height', 20)
+                        .attr('x', 55)
+                        .attr('y', 480+ ScrollFloat)
+                        .style('fill', "BBBBBB")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+		                .style("stroke","BBBBBB")
+rect3 = content.append('rect')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('width', 40)
+                        .attr('height', 20)
+                        .attr('x', 100)
+                        .attr('y', 480+ ScrollFloat)
+                        .style('fill', "999999")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+		                .style("stroke","999999")
+rect4 = content.append('rect')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('width', 40)
+                        .attr('height', 20)
+                        .attr('x', 145)
+                        .attr('y', 480+ ScrollFloat)
+                        .style('fill', "777777")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+		                .style("stroke","777777")
+rect5 = content.append('rect')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('width', 40)
+                        .attr('height', 20)
+                        .attr('x', 190)
+                        .attr('y', 480+ ScrollFloat)
+                        .style('fill', "555555")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+			            .style("stroke","555555");
+
+circle0 = content.append('circle')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('r', 0)
+                        .attr('cx', 0)
+                        .attr('cy', 0)
+						.style('opacity',0);
+								
+circle1 = content.append('circle')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('r', 4)
+                        .attr('cx', 16)
+                        .attr('cy', 550+ ScrollFloat)
+                        .style('fill', "555555")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+			            .style("stroke","555555");
+						
+circle2 = content.append('circle')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('r', 9)
+                        .attr('cx', 49)
+                        .attr('cy', 550+ ScrollFloat)
+                        .style('fill', "555555")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+			            .style("stroke","555555");
+						
+circle3 = content.append('circle')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('r', 14)
+                        .attr('cx', 92)
+                        .attr('cy', 550+ ScrollFloat)
+                        .style('fill', "555555")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+			            .style("stroke","555555");
+						
+circle4 = content.append('circle')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('r', 19)
+                        .attr('cx', 145)
+                        .attr('cy', 550+ ScrollFloat)
+                        .style('fill', "555555")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+			            .style("stroke","555555");
+						
+circle5 = content.append('circle')
+						.style('fill', 'white')
+						.transition().duration(200)
+                        .attr('r', 24)
+                        .attr('cx', 208)
+                        .attr('cy', 550+ ScrollFloat)
+                        .style('fill', "555555")
+	                    .style("stroke-width", 10)
+						.style('opacity',.6)
+			            .style("stroke","555555");
+						
+						
+						var rectt = d3.selectAll("rect");
+									rectt
+										 .on("mouseout",rectMouseout)
+								         .on("mouseover",rectMouseover);
+						
+				 		var circ = d3.selectAll("circle");
+						            circ
+				 						.on("mouseout",circMouseout)
+				 						.on("mouseover",circMouseover);
+		
+					}
+		
+				}
+				
+				
+				
+
+var myMouseoutFunction = function(d) {
+	var circle = d3.select(this);
+		circle.transition().duration(200)
+		.attr("rx", function(d){return Math.sqrt(((d.likes)/totallikes)*800)*4+5;})
+	    .attr("ry", function(d){return Math.sqrt(((d.likes)/totallikes)*800)*4+5;})
+		//.attr("rx", function(d){return Math.sqrt(((d.likes+1)/totallikes)*300+13)*4;})
+   		//.attr("ry", function(d){return Math.sqrt(((d.likes+1)/totallikes)*300+13)*4;})
+		//.attr("rx", function(d){return ((d.likes+1)/totallikes)*300+13;})
+	  	//.attr("ry", function(d){return ((d.likes+1)/totallikes)*300+13;})
+		.style("stroke-width", 3)
+		.style("stroke","white")
+		.style("opacity",.9);
+		
+		d3.select("g").remove();
+		circle.moveToBack();
+}
+
+
+	var rectMouseover = function(d, i) {
+		if(i != 0){
+			var rect = d3.select(this);
+				rect.transition().duration(200)
+					.style("opacity",1);
+							
+			var circle = d3.selectAll(".node");
+				circle.transition().duration(400)
+					  .style ("opacity",(function(d){ if( (d.deltatime/300000>=(30*(i-1))&&d.deltatime/300000<(30*i)) || d.group==9)return .9;else return 0;}))
+					  .style("stroke-width", 3)
+					  .style("stroke","black");
+		}
+	}
+
+	var rectMouseout = function(d) {
+									
+		var rect = d3.select(this);
+			rect.transition().duration(200)
+				.style("opacity",.6);
+				
+		var circle = d3.selectAll(".node");
+			circle.transition().duration(400)
+	 			  .style ("opacity",(function(d){ if (d.group == 9) return 1.0 ;else return 0.9;}))
+				  .style("stroke-width", function(d){if(d.group!=9)return 3;else return d.importance/3+2;})
+				  .style("stroke",function(d){if(d.group!=9)return "white";else return color2(d.group);});
+	}
+
+	var circMouseover = function(d,i) {
+		if(i != 0){
+			var rect = d3.select(this);
+				rect.transition().duration(200)
+				.style("opacity",1);
+							
+			var circle = d3.selectAll(".node");
+				circle.transition().duration(400)
+				      .style ("opacity",(function(d){ if( d.importance>=10+(i-1)*3 || d.group==9)return .9;else return 0;}))
+					  .style("stroke-width", 3)
+					  .style("stroke","black");
+		}
+	}
+
+	var circMouseout = function(d) {
+									
+		var rect = d3.select(this);
+			rect.transition().duration(200)
+				.style("opacity",.6);
+						
+		var circle = d3.selectAll(".node");
+			circle.transition().duration(400)
+		  		  .style ("opacity",function(d){if(d.group == 9) return 1.0;else return 0.9;})
+				  .style("stroke-width", function(d){if(d.group!=9)return 3;else return d.importance/3+2;})
+				  .style("stroke",function(d){if(d.group!=9)return "white";else return color2(d.group);});
+	}
+
+
+
+
+
+var clicked = function(d)  {
+	 
+	
+	if(ifClick == false)
+	{   nodeName = d.name;
+		ifClick = true;
+	
+	}
+	
+	else if(ifClick == true && d.name == nodeName)
+		ifClick = false;
+		
+	if(ifClick == true)
+		{var circle = d3.selectAll(".node");
+			 circle.on("mouseout",null)
+			       .on("mouseover",null);
+			   }
+	
+		 	if(ifClick == false)
+		 		{var circle = d3.selectAll(".node");
+		 			 circle.on("mouseout",myMouseoutFunction)
+		                	.on("mouseover",myMouseoverFunction);
+			
+		}
+}
+					
+												
+	
+function formatDateTime(dateStr){
+    var year, month, day, hour, minute, dateUTC, date, ampm, d, time;
+    var iso = (dateStr.indexOf(' ')==-1&&dateStr.substr(4,1)=='-'&&dateStr.substr(7,1)=='-'&&dateStr.substr(10,1)=='T') ? true : false;
+ 
+        year = dateStr.substr(0,4);
+        month = parseInt((dateStr.substr(5,1)=='0') ? dateStr.substr(6,1) : dateStr.substr(5,2))-1;
+        day = dateStr.substr(8,2);
+        hour = dateStr.substr(11,2);
+        minute = dateStr.substr(14,2);
+        dateUTC = Date.UTC(year, month, day, hour, minute);
+		//console.log(year+ " "+ month+ " " + day);                 
+        date = new Date(dateUTC);
+ 	   
+        return date;                         
+}
+
+var totallikes = 0;
+
+d3.json(dataraw, function( error , graph ) {
+	if (error) throw error;
+	var mydata ={
+		nodes :[],
+		links :[]
+	}
+	for (var i = 1 ; i < 9 ; i ++)
+	{
+		
+		mydata.nodes.push(
+			{
+				name: "ghost" , 
+				message :"ghost" , 
+				group :i, 
+				importance : -5 ,
+				time : 100 , 
+				deltatime :100,
+				emotion: emo(i),
+                poscount:0,
+                negcount:0,
+			}
+		);
+		mydata.links.push(
+			{
+				source: i-1 , 
+				target:JSONLength(graph.comments.data)+8 , 
+				deltatime: formatDateTime(graph.comments.data[i].created_time).getTime()-formatDateTime(graph.created_time).getTime()});
+	}
+	for ( var i = 0 ; i < JSONLength(graph.comments.data) ; i ++)
+	{
+		mydata.nodes.push(
+			{
+				name: graph.comments.data[i].from.name , 
+				message :graph.comments.data[i].message , 
+				//totallikes += graph.comments.data[i].like_count,
+				group :readTextFile("positive.txt","negative.txt",graph.comments.data[i].message), 
+				importance : Math.round(Math.log(graph.comments.data[i].like_count+9)*4) ,
+				emotion: emo(readTextFile("positive.txt","negative.txt",graph.comments.data[i].message)),
+                poscount: poscount("positive.txt",graph.comments.data[i].message),
+                negcount: poscount("negative.txt",graph.comments.data[i].message),
+				likes:graph.comments.data[i].like_count,
+				time : formatDateTime(graph.comments.data[i].created_time), 
+				deltatime: formatDateTime(graph.comments.data[i].created_time).getTime()-formatDateTime(graph.created_time).getTime() 
+			}
+		);
+		totallikes = totallikes + graph.comments.data[i].like_count;
+			
+		mydata.links.push(
+			{
+				source:i+8 , 
+				target:JSONLength(graph.comments.data)+8 , 
+				deltatime: formatDateTime(graph.comments.data[i].created_time).getTime()-formatDateTime(graph.created_time).getTime()
+			}
+		);
+		
+	}
+	mydata.nodes.push(
+		{
+			name : graph.from.name ,
+			message :graph.name, 
+			group : 9 , 
+			importance : 50,
+			likes : totallikes/7 ,
+			comments:JSONLength(graph.comments.data) , 
+			time : formatDateTime(graph.created_time) , deltatime: 50
+		}
+	);
+		
+
+force
+    .nodes(mydata.nodes)
+    .links(mydata.links)
+    .start();
+
+//node的樣式
+  var node = svg.selectAll(".node")
+      .data(mydata.nodes)
+	  .enter()
+	  .append("ellipse")
+      .attr("class", "node")
+      .attr("rx", function(d){return Math.sqrt(((d.likes)/totallikes)*800)*4+5;})
+	  .attr("ry", function(d){return Math.sqrt(((d.likes)/totallikes)*800)*4+5;})
+	  .style("stroke-width", 3)
+	  .style("stroke",function(d){return color2(d.group);})
+	  .style("stroke","white")
+      .style("fill", function(d){return color(d.group);})
+	  .call(force.drag)
+	  .on("mouseout",myMouseoutFunction)
+ 	  .on("mouseover",myMouseoverFunction)
+	  .on("dblclick",clicked)
+   	  .style("opacity",.9);
+	
+	  
+ 
+	  function JSONLength(obj) {
+	  var size = 0, key;
+	  for (key in obj) {
+	  if (obj.hasOwnProperty(key)) size++;
+	  }
+	  return size;
+	  };
+
+
+	  
+  force.on("tick", function() {    
+    node
+	 .call(force.resume)
+	 .attr("cx", function(d) { 
+	 	if(d.group != 9) return d.x += foci[d.group-1].x/2.5;
+	 	else if (d.x>width*0.5+100)return d.x-=1; 
+	 	else if (d.x<width*0.5-100)return d.x+=1;
+	 	else return d.x;
+	 	}
+	 )
+	 .attr("cy", function(d) { 
+	 	if(d.group != 9) return d.y+= foci[d.group-1].y/2.5 ;
+	 	else if (d.y>height*0.6+100)return d.y-=1; 
+	 	else if (d.y<height*0.6-100)return d.y+=1;
+	 	else return d.y;
+	 	}
+	 );
+	}
+  );
+});
+
+
+
+
+
+
+//<img src="http://s3.amazonaws.com/codecademy-blog/assets/f3a16fb6.jpg" style="position:absolute;top:15px;left:10px;">
+
+
+</script>
+
